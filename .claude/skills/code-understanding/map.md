@@ -180,8 +180,7 @@ python3 -c "
 import sys, os, json
 sys.path.insert(0, os.environ['RAPTOR_DIR'])
 from core.inventory.coverage import update_coverage
-from core.json import save_json
-from pathlib import Path
+from core.inventory import save_checklist
 
 workdir = sys.argv[1]
 inv = json.load(open(f'{workdir}/checklist.json'))
@@ -191,10 +190,9 @@ checked = [
     {'file': 'src/db/query.py', 'function': 'run_query'},
     # ... etc
 ]
-update_coverage(inv, checked, 'understand:map')
-save_json(Path(workdir) / 'checklist.json', inv)
-print(f'Recorded {len(checked)} functions as checked by understand:map')
-" <workdir_path>
+update_coverage(inv, checked, "understand:map")
+save_checklist(workdir, inv)
+print(f"Recorded {len(checked)} functions as checked by understand:map")
 ```
 
 This ensures coverage tracking is cumulative across `/understand` and `/validate` runs.
