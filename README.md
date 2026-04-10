@@ -442,7 +442,7 @@ Chat with us on the #raptor channel at the Prompt||GTFO Slack:
 
 ## License
 
-MIT License - Copyright (c) 2025 Gadi Evron, Daniel Cuthbert, Thomas Dullien (Halvar Flake), Michael Bargury, John Cartwright
+MIT License - Copyright (c) 2025-2026 Gadi Evron, Daniel Cuthbert, Thomas Dullien (Halvar Flake), Michael Bargury, John Cartwright
 
 See LICENSE file for full text.
 
