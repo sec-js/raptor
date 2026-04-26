@@ -8,7 +8,8 @@ import sys
 import tempfile
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# core/hash/tests/test_hash.py -> repo root
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from core.hash import sha256_bytes, sha256_file, sha256_string, sha256_tree
 from core.config import RaptorConfig
