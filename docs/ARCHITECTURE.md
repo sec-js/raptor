@@ -37,7 +37,7 @@ The modular architecture refactors the original monolithic structure into a clea
 
 ```
 raptor/
-├── core/                  # Shared utilities (config, logging, progress, SARIF parsing)
+├── core/                  # Shared utilities (config, logging, progress, git, hash, SARIF)
 ├── packages/              # Independent security capabilities
 │   ├── static-analysis/   # Semgrep scanning
 │   ├── codeql/            # CodeQL deep analysis and dataflow validation
@@ -69,6 +69,8 @@ raptor/
 ├── core/                           # Shared utilities layer
 │   ├── __init__.py
 │   ├── config.py                   # RaptorConfig (paths, settings)
+│   ├── git/                        # Sandbox-routed clone + URL allowlist (clone_repository, validate_repo_url)
+│   ├── hash/                       # SHA-256 helpers (sha256_tree/file/bytes/string)
 │   ├── logging.py                  # Structured logging with JSONL audit trail
 │   ├── progress.py                 # Progress tracking utilities
 │   ├── sarif/

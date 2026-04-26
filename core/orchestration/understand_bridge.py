@@ -210,7 +210,7 @@ def _find_stale_files(
     another checklist. This is immune to the project-mode symlink problem
     where both runs share one checklist.json file.
     """
-    import hashlib
+    from core.hash import sha256_file
 
     target = Path(target_path)
     stale: Set[str] = set()
@@ -220,7 +220,7 @@ def _find_stale_files(
             # File deleted since understand ran
             stale.add(rel_path)
             continue
-        disk_hash = hashlib.sha256(full_path.read_bytes()).hexdigest()
+        disk_hash = sha256_file(full_path)
         if disk_hash != u_hash:
             stale.add(rel_path)
     return stale

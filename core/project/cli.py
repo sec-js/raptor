@@ -426,10 +426,11 @@ def main():
             print(f"  sha256: {result['sha256']}")
 
         elif args.subcommand == "import":
-            from .export import import_project, _sha256_file
+            from .export import import_project
+            from core.hash import sha256_file
             zip_path = Path(args.path)
             if args.sha256:
-                actual = _sha256_file(zip_path)
+                actual = sha256_file(zip_path)
                 if actual != args.sha256.lower():
                     print(f"Hash mismatch: expected {args.sha256.lower()}, got {actual}",
                           file=sys.stderr)

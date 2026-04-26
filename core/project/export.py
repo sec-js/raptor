@@ -4,12 +4,12 @@ Exports a project output directory as a zip archive and imports
 zip archives back, with path traversal and symlink validation.
 """
 
-import hashlib
 import shutil
 import zipfile
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from core.hash import sha256_file
 from core.logging import get_logger
 
 logger = get_logger()
@@ -53,15 +53,6 @@ def validate_zip_contents(zip_path: Path) -> Tuple[bool, List[str]]:
         return False, ["Invalid zip file"]
 
     return len(warnings) == 0, warnings
-
-
-def _sha256_file(path: Path) -> str:
-    """Compute SHA-256 hex digest of a file."""
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(65536), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def export_project(project_output_dir: Path, dest_path: Path,
@@ -108,7 +99,7 @@ def export_project(project_output_dir: Path, dest_path: Path,
         if project_json_path and project_json_path.exists():
             zf.write(project_json_path, f"{project_output_dir.name}/.project.json")
 
-    sha256 = _sha256_file(dest_path)
+    sha256 = sha256_file(dest_path)
     logger.info(f"Exported project to {dest_path} (sha256: {sha256})")
     return {"path": str(dest_path), "sha256": sha256}
 

@@ -8,13 +8,13 @@ scan 1 stores findings, scan 2 recalls them as context.
 All hooks are no-ops when SAGE is unavailable.
 """
 
-import hashlib
 import os
 import threading
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from core.hash import sha256_string
 from core.logging import get_logger
 
 from .client import SageClient
@@ -84,7 +84,7 @@ def _repo_key(repo_path: str) -> str:
     # (symlinks, relative paths) collapse to the same key, and same-basename
     # repos at different locations stay distinct.
     resolved = str(Path(repo_path).resolve()) if repo_path else ""
-    return hashlib.sha256(resolved.encode()).hexdigest()[:12]
+    return sha256_string(resolved)[:12]
 
 
 def _findings_domain(repo_path: str) -> str:

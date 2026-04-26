@@ -10,7 +10,6 @@ Manages multiple LLM providers with:
 - Task-specific model selection
 """
 
-import hashlib
 import re
 import sys
 import time
@@ -21,6 +20,7 @@ from typing import Dict, Optional, Any
 # packages/llm_analysis/llm/client.py -> repo root
 sys.path.insert(0, str(Path(__file__).parents[3]))
 
+from core.hash import sha256_string
 from core.logging import get_logger
 from .config import LLMConfig, ModelConfig
 from .providers import LLMProvider, LLMResponse, StructuredResponse, create_provider
@@ -297,7 +297,7 @@ class LLMClient:
     def _get_cache_key(self, prompt: str, system_prompt: Optional[str], model: str) -> str:
         """Generate cache key for prompt."""
         content = f"{model}:{system_prompt or ''}:{prompt}"
-        return hashlib.sha256(content.encode()).hexdigest()
+        return sha256_string(content)
 
     def _get_cached_response(self, cache_key: str) -> Optional[str]:
         """Retrieve cached response if available."""

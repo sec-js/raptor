@@ -14,6 +14,9 @@ from core.sarif.parser import (
     sanitize_finding_for_display,
 )
 
+from core.git import clone_repository
+from core.hash import sha256_tree
+
 __all__ = [
     "RaptorConfig",
     "get_logger",
@@ -22,4 +25,6 @@ __all__ = [
     "validate_sarif",
     "generate_scan_metrics",
     "sanitize_finding_for_display",
+    "clone_repository",
+    "sha256_tree",
 ]
