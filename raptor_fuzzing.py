@@ -21,6 +21,7 @@ from pathlib import Path
 # Add to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+from core.hash import sha256_file
 from core.json import save_json
 
 from core.config import RaptorConfig
@@ -135,8 +136,7 @@ def main() -> None:
             logger.info(f"Average confidence: {stats['average_confidence']:.2f}")
 
         # Check for past strategies for this binary
-        import hashlib
-        binary_hash = hashlib.sha256(binary_path.read_bytes()).hexdigest()[:16]
+        binary_hash = sha256_file(binary_path)[:16]
         best_strategy = memory.get_best_strategy(binary_hash)
         if best_strategy:
             logger.info(f"✨ Found best strategy from memory: {best_strategy}")
@@ -438,8 +438,7 @@ def main() -> None:
 
         # Record this campaign in memory for future learning
         if memory:
-            import hashlib
-            binary_hash = hashlib.sha256(binary_path.read_bytes()).hexdigest()[:16]
+            binary_hash = sha256_file(binary_path)[:16]
             memory.record_campaign({
                 "binary_name": binary_path.name,
                 "binary_hash": binary_hash,

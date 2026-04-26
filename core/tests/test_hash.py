@@ -1,14 +1,16 @@
 """Tests for core.hash module."""
 
 import hashlib
+import os
+import platform
 import pytest
+import sys
 import tempfile
 from pathlib import Path
 
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core.hash import sha256_tree
+from core.hash import sha256_bytes, sha256_file, sha256_string, sha256_tree
 from core.config import RaptorConfig
 
 
@@ -196,3 +198,113 @@ class TestSha256Tree:
         # Create symlink or use different reference - should still be same
         # This is implicit in the implementation using relative_to(root)
         assert len(hash1) == 64
+
+
+class TestSha256File:
+    """Tests for sha256_file() — single-file streamed hash."""
+
+    def test_matches_hashlib_oneshot(self, tmp_path):
+        """Streamed digest must equal hashlib.sha256(content)."""
+        f = tmp_path / "x.bin"
+        content = b"hello world\n" * 100
+        f.write_bytes(content)
+        assert sha256_file(f) == hashlib.sha256(content).hexdigest()
+
+    def test_empty_file(self, tmp_path):
+        """Empty file hashes to the empty-string digest."""
+        f = tmp_path / "empty"
+        f.write_bytes(b"")
+        assert sha256_file(f) == hashlib.sha256(b"").hexdigest()
+
+    def test_chunk_size_does_not_affect_digest(self, tmp_path):
+        """Different chunk sizes must produce identical digests."""
+        f = tmp_path / "x.bin"
+        f.write_bytes(b"x" * 100_000)
+        h_small = sha256_file(f, chunk_size=128)
+        h_big = sha256_file(f, chunk_size=1024 * 1024)
+        h_default = sha256_file(f)
+        assert h_small == h_big == h_default
+
+    def test_consistency(self, tmp_path):
+        f = tmp_path / "x.bin"
+        f.write_bytes(b"abc")
+        assert sha256_file(f) == sha256_file(f)
+
+    def test_streams_without_full_load(self, tmp_path):
+        """Sanity check: a file larger than the chunk size still hashes
+        correctly (i.e. the loop terminates and accumulates all chunks)."""
+        f = tmp_path / "big.bin"
+        # Make several chunks at the small chunk_size we'll pass.
+        f.write_bytes(b"a" * 5000)
+        assert sha256_file(f, chunk_size=512) == hashlib.sha256(b"a" * 5000).hexdigest()
+
+
+class TestSha256Bytes:
+    """Tests for sha256_bytes() — in-memory bytes."""
+
+    def test_matches_hashlib(self):
+        for payload in (b"", b"a", b"hello", b"\x00\x01\xff", b"x" * 10_000):
+            assert sha256_bytes(payload) == hashlib.sha256(payload).hexdigest()
+
+    def test_returns_hex_string(self):
+        digest = sha256_bytes(b"abc")
+        assert isinstance(digest, str)
+        assert len(digest) == 64
+        assert all(c in "0123456789abcdef" for c in digest)
+
+
+class TestSha256String:
+    """Tests for sha256_string() — UTF-8 + surrogateescape."""
+
+    def test_ascii_matches_default_encode(self):
+        """For pure ASCII, surrogateescape encoding == default UTF-8."""
+        for s in ("", "abc", "hello world\n"):
+            assert sha256_string(s) == hashlib.sha256(s.encode()).hexdigest()
+
+    def test_unicode_string(self):
+        """Valid UTF-8 unicode strings hash identically to plain .encode()."""
+        s = "café — 日本語 — 🦖"
+        assert sha256_string(s) == hashlib.sha256(s.encode("utf-8")).hexdigest()
+
+    def test_surrogate_does_not_raise(self):
+        """A string containing a lone surrogate (from non-UTF-8 bytes round-tripped
+        via surrogateescape) must hash, not raise UnicodeEncodeError."""
+        # \udcff is the surrogate that surrogateescape produces for byte 0xff.
+        weird = "prefix-\udcff-suffix"
+        # Plain .encode() WOULD raise on this; sha256_string must not.
+        digest = sha256_string(weird)
+        assert len(digest) == 64
+
+    def test_surrogate_round_trips_raw_bytes(self):
+        """A byte sequence → str (surrogateescape) → sha256_string should
+        equal sha256_bytes of the original bytes."""
+        raw = b"path-with-\xff-byte"
+        s = raw.decode("utf-8", errors="surrogateescape")
+        assert sha256_string(s) == sha256_bytes(raw)
+
+
+class TestSha256TreeSurrogateescape:
+    """Filename-encoding regression tests for sha256_tree.
+
+    Pre-fix, ``sha256_tree`` called ``.as_posix().encode()`` which raises
+    ``UnicodeEncodeError`` on filesystems that hold non-UTF-8 byte sequences
+    in filenames (common on Linux). Post-fix, surrogateescape round-trips
+    those bytes safely.
+    """
+
+    @pytest.mark.skipif(
+        platform.system() != "Linux",
+        reason="Non-UTF-8 filenames are a Linux-specific filesystem behaviour; "
+               "macOS HFS+/APFS normalises and Windows rejects them.",
+    )
+    def test_non_utf8_filename_does_not_raise(self, tmp_path):
+        """A file with raw 0xff in its name must hash, not raise."""
+        # Build the path as bytes so we can include 0xff.
+        parent_bytes = os.fsencode(str(tmp_path))
+        bad_name_bytes = parent_bytes + b"/file-\xff.bin"
+        with open(bad_name_bytes, "wb") as f:
+            f.write(b"content")
+
+        # The pre-fix implementation raised UnicodeEncodeError here.
+        digest = sha256_tree(tmp_path)
+        assert len(digest) == 64
