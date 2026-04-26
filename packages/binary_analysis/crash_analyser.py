@@ -14,13 +14,13 @@ from core.sandbox import run as _sandbox_run, run_trusted as _run_trusted
 # - ASAN binary: no ptrace needed → default full sandbox via _sandbox_run.
 # Each call site specifies target+output for Landlock engagement.
 import os
-import hashlib
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional
 import platform
 
+from core.hash import sha256_string
 from core.logging import get_logger
 from packages.binary_analysis._validators import is_valid_hex_address
 
@@ -1182,11 +1182,11 @@ class CrashAnalyser:
 
         if not functions:
             # Fallback: hash the entire stack trace
-            return hashlib.sha256(stack_trace.encode()).hexdigest()[:16]
+            return sha256_string(stack_trace)[:16]
 
         # Hash the function names (top 10 frames to avoid overly specific hashes)
         stack_signature = '|'.join(functions[:10])
-        return hashlib.sha256(stack_signature.encode()).hexdigest()[:16]
+        return sha256_string(stack_signature)[:16]
 
     def _detect_asan_binary(self) -> bool:
         """Detect if binary was compiled with AddressSanitizer."""

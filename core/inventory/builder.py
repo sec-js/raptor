@@ -4,7 +4,6 @@ Enumerates source files, extracts functions, computes checksums.
 Used by both /validate (Stage 0) and /understand (MAP-0).
 """
 
-import hashlib
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -12,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from core.hash import sha256_bytes
 from core.json import load_json, save_json
 
 from .languages import LANGUAGE_MAP, detect_language
@@ -291,7 +291,7 @@ def _process_single_file(
             return {"path": rel_path, "_excluded": True, "_reason": "generated_file", "_pattern": None}
 
         line_count = content.count('\n') + 1
-        sha256 = hashlib.sha256(raw_bytes).hexdigest()
+        sha256 = sha256_bytes(raw_bytes)
 
         # If file unchanged from previous inventory, reuse old entry (skip parsing)
         if old_files and rel_path in old_files:

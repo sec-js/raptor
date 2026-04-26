@@ -5,11 +5,11 @@ RAPTOR Crash Collector
 Collects and deduplicates crashes from AFL output.
 """
 
-import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
+from core.hash import sha256_file
 from core.logging import get_logger
 
 logger = get_logger()
@@ -106,12 +106,8 @@ class CrashCollector:
         )
 
     def _hash_file(self, file_path: Path) -> str:
-        """Compute SHA256 hash of file."""
-        sha256 = hashlib.sha256()
-        with open(file_path, "rb") as f:
-            while chunk := f.read(8192):
-                sha256.update(chunk)
-        return sha256.hexdigest()[:16]
+        """Short SHA-256 hash of file (first 16 hex chars)."""
+        return sha256_file(file_path)[:16]
 
     def rank_crashes_by_exploitability(self, crashes: List[Crash]) -> List[Crash]:
         """

@@ -28,6 +28,7 @@ sys.path.insert(0, str(Path(__file__).parents[2]))
 
 from core.json import load_json, save_json
 from core.config import RaptorConfig
+from core.hash import sha256_string
 from core.logging import get_logger
 from packages.codeql.build_detector import BuildSystem
 
@@ -162,20 +163,24 @@ class DatabaseManager:
                 git_hash = result.stdout.strip()
                 # Combine with repo path to ensure uniqueness
                 combined = f"{repo_path}:{git_hash}"
-                return hashlib.sha256(combined.encode()).hexdigest()[:16]
+                return sha256_string(combined)[:16]
         except Exception:
             pass
 
-        # Fallback: hash directory structure and modification times
+        # Fallback: hash directory structure and modification times.
+        # Iterative accumulator (mixing many inputs into one digest) so
+        # this stays on hashlib.sha256() — core.hash exposes only
+        # closed-form one-shot helpers. Filename .encode() calls below
+        # use surrogateescape to match core.hash's non-UTF-8 safety.
         hasher = hashlib.sha256()
-        hasher.update(str(repo_path).encode())
+        hasher.update(str(repo_path).encode("utf-8", errors="surrogateescape"))
 
         # Hash a sample of files (for performance)
         try:
             files = list(repo_path.rglob("*"))[:1000]  # Sample first 1000 files
             for file_path in sorted(files):
                 if file_path.is_file():
-                    hasher.update(str(file_path.relative_to(repo_path)).encode())
+                    hasher.update(str(file_path.relative_to(repo_path)).encode("utf-8", errors="surrogateescape"))
                     try:
                         stat = file_path.stat()
                         hasher.update(str(stat.st_mtime).encode())
